@@ -60,6 +60,15 @@ def search_movies(title, min_year=None, max_year=None, nsfw=False):
         print(f"Ошибка MySQL: {err}")
         return []
 
+
+def parse_query(query):
+    movie_title = query.get("movie", [""])[0]
+    min_year = query.get("min_year", [None])[0]
+    max_year = query.get("max_year", [None])[0]
+    nsfw = query.get("nsfw", ["false"])[0].lower() == "on"
+    return movie_title, min_year, max_year, nsfw
+
+
 class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_path = urlparse(self.path)
@@ -87,12 +96,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         # Поиск через форму
         elif parsed_path.path == "/search":
             query = parse_qs(parsed_path.query)
-
-            # TODO рефакторинг DRY
-            movie_title = query.get("movie", [""])[0]
-            min_year = query.get("min_year", [None])[0]
-            max_year = query.get("max_year", [None])[0]
-            nsfw = query.get("nsfw", ["false"])[0].lower() == "on"
+            movie_title, min_year, max_year, nsfw = parse_query(query)
             
             
             # Валидация
@@ -139,12 +143,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         # API для AJAX-запросов
         elif parsed_path.path == "/api/search":
             query = parse_qs(parsed_path.query)
-
-            # Парсинг параметров запроса
-            movie_title = query.get("movie", [""])[0]
-            min_year = query.get("min_year", [None])[0]
-            max_year = query.get("max_year", [None])[0]
-            nsfw = query.get("nsfw", ["false"])[0].lower() == "on"
+            movie_title, min_year, max_year, nsfw = parse_query(query)
             print(f'parsed nsfw: {nsfw}{type(nsfw)}')
 
             # Валидация
