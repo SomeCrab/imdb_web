@@ -94,11 +94,32 @@ class RequestHandler(BaseHTTPRequestHandler):
             max_year = query.get("max_year", [None])[0]
             nsfw = query.get("nsfw", ["false"])[0].lower() == "on"
             
+            
+            # Валидация
+            errors = []
             try:
                 min_year = int(min_year) if min_year else None
-                max_year = int(max_year) if max_year else None
+                if min_year and (min_year < 1890 or min_year > 2030):
+                    errors.append("Минимальный год должен быть между 1890 и 2030")
             except ValueError:
-                min_year = max_year = None
+                errors.append("Некорректный формат минимального года")
+
+            try:
+                max_year = int(max_year) if max_year else None
+                if max_year and (max_year < 1890 or max_year > 2030):
+                    errors.append("Максимальный год должен быть между 1890 и 2030")
+            except ValueError:
+                errors.append("Некорректный формат максимального года")
+
+            if min_year and max_year and min_year > max_year:
+                errors.append("Минимальный год не может быть больше максимального")
+
+            if errors:
+                self.send_response(400)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"errors": errors}).encode("utf-8"))
+                return
             
             results = search_movies(
                 title=movie_title,
@@ -125,11 +146,32 @@ class RequestHandler(BaseHTTPRequestHandler):
             max_year = query.get("max_year", [None])[0]
             nsfw = query.get("nsfw", ["false"])[0].lower() == "on"
             print(f'parsed nsfw: {nsfw}{type(nsfw)}')
+
+            # Валидация
+            errors = []
             try:
                 min_year = int(min_year) if min_year else None
-                max_year = int(max_year) if max_year else None
+                if min_year and (min_year < 1890 or min_year > 2030):
+                    errors.append("Минимальный год должен быть между 1890 и 2030")
             except ValueError:
-                min_year = max_year = None
+                errors.append("Некорректный формат минимального года")
+
+            try:
+                max_year = int(max_year) if max_year else None
+                if max_year and (max_year < 1890 or max_year > 2030):
+                    errors.append("Максимальный год должен быть между 1890 и 2030")
+            except ValueError:
+                errors.append("Некорректный формат максимального года")
+
+            if min_year and max_year and min_year > max_year:
+                errors.append("Минимальный год не может быть больше максимального")
+
+            if errors:
+                self.send_response(400)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"errors": errors}).encode("utf-8"))
+                return
             
             results = search_movies(
                 title=movie_title,

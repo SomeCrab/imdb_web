@@ -87,7 +87,8 @@
             try {
                 const response = await fetch(`/api/search?${params}`);
                 if (!response.ok) {
-                    throw new Error('Ошибка сервера');
+                    const errorData = await response.json();
+                    throw new Error(errorData.errors.join(", "));
                 }
                 const movies = await response.json();
                 
@@ -108,10 +109,10 @@
                 }
                 resultsDiv.innerHTML = html;
                 
-            } catch (error) {
-                console.error('Ошибка:', error);
-                resultsDiv.innerHTML = '<p>Произошла ошибка при выполнении поиска. Попробуйте позже.</p>';
-            }
+                } catch (error) {
+                    console.error('Ошибка:', error);
+                    resultsDiv.innerHTML = `<p class="error">${error.message}</p>`;
+                }
         }, 700); // Задержка в 700 мс
     }
 
