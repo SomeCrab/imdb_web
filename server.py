@@ -75,23 +75,11 @@ class RequestHandler(BaseHTTPRequestHandler):
         
         # Главная страница
         if parsed_path.path == "/":
-            template = env.get_template('index.html')
-            html = template.render(results=None)
-            
-            self.send_response(200)
-            self.send_header("Content-type", "text/html")
-            self.end_headers()
-            self.wfile.write(html.encode("utf-8"))
+            self.send_custom_response(None)
 
         # страница about
         elif parsed_path.path == "/about":
-            template = env.get_template('about.html')
-            html = template.render()
-            
-            self.send_response(200)
-            self.send_header("Content-type", "text/html")
-            self.end_headers()
-            self.wfile.write(html.encode("utf-8"))
+            self.send_custom_response(None, templ='about.html')
             
         # Поиск через форму
         elif parsed_path.path == "/search":
@@ -119,10 +107,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 errors.append("Минимальный год не может быть больше максимального")
 
             if errors:
-                self.send_response(400)
-                self.send_header("Content-type", "application/json")
-                self.end_headers()
-                self.wfile.write(json.dumps({"errors": errors}).encode("utf-8"))
+                self.send_custom_response(errors, resp_code=400, Cont_type="application/json")
                 return
             
             results = search_movies(
@@ -132,13 +117,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 nsfw=nsfw
             )
             print(f'parsed res: {results}{type(results)}')
-            template = env.get_template('index.html')
-            html = template.render(results=results)
-            
-            self.send_response(200)
-            self.send_header("Content-type", "text/html")
-            self.end_headers()
-            self.wfile.write(html.encode("utf-8"))
+            self.send_custom_response(results)
             
         # API для AJAX-запросов
         elif parsed_path.path == "/api/search":
@@ -166,10 +145,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 errors.append("Минимальный год не может быть больше максимального")
 
             if errors:
-                self.send_response(400)
-                self.send_header("Content-type", "application/json")
-                self.end_headers()
-                self.wfile.write(json.dumps({"errors": errors}).encode("utf-8"))
+                self.send_custom_response(errors, resp_code=400, Cont_type="application/json")
                 return
             
             results = search_movies(
@@ -179,17 +155,28 @@ class RequestHandler(BaseHTTPRequestHandler):
                 nsfw=nsfw
             )
             
-            self.send_response(200)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(results).encode("utf-8"))
-            
-        else:
+            self.send_custom_response(results, Cont_type="application/json", api=True)
+
         # страница 404
-            
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b"404 Not Found")
+        else:
+            self.send_custom_response(None, resp_code=404, templ='not_found.html')
+
+    def send_custom_response(self, data, resp_code=200, Cont_type="text/html", templ='index.html', api=False):
+        if not api:
+            template = env.get_template(templ)
+            html = template.render(results=data)
+        self.send_response(resp_code)
+        self.send_header("Content-type", Cont_type)
+        self.end_headers()
+        if resp_code == 404:
+            self.wfile.write(html.encode("utf-8"))
+        elif resp_code == 400:
+            self.wfile.write(json.dumps({"errors": data}).encode("utf-8"))
+        elif not api:
+            self.wfile.write(html.encode("utf-8"))
+        else:
+            self.wfile.write(json.dumps(data).encode("utf-8"))
+
 
 if __name__ == "__main__":
     server_address = ("localhost", 8000)
