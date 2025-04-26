@@ -69,6 +69,28 @@ def parse_query(query):
     return movie_title, min_year, max_year, nsfw
 
 
+def validate_parsed_data(movie_title, min_year, max_year, nsfw):
+    errors = []
+    try:
+        min_year = int(min_year) if min_year else None
+        if min_year and (min_year < 1890 or min_year > 2030):
+            errors.append("Минимальный год должен быть между 1890 и 2030")
+    except ValueError:
+        errors.append("Некорректный формат минимального года")
+
+    try:
+        max_year = int(max_year) if max_year else None
+        if max_year and (max_year < 1890 or max_year > 2030):
+            errors.append("Максимальный год должен быть между 1890 и 2030")
+    except ValueError:
+        errors.append("Некорректный формат максимального года")
+
+    if min_year and max_year and min_year > max_year:
+        errors.append("Минимальный год не может быть больше максимального")
+       
+    return errors
+
+
 class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_path = urlparse(self.path)
@@ -86,25 +108,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             query = parse_qs(parsed_path.query)
             movie_title, min_year, max_year, nsfw = parse_query(query)
             
-            
             # Валидация
-            errors = []
-            try:
-                min_year = int(min_year) if min_year else None
-                if min_year and (min_year < 1890 or min_year > 2030):
-                    errors.append("Минимальный год должен быть между 1890 и 2030")
-            except ValueError:
-                errors.append("Некорректный формат минимального года")
-
-            try:
-                max_year = int(max_year) if max_year else None
-                if max_year and (max_year < 1890 or max_year > 2030):
-                    errors.append("Максимальный год должен быть между 1890 и 2030")
-            except ValueError:
-                errors.append("Некорректный формат максимального года")
-
-            if min_year and max_year and min_year > max_year:
-                errors.append("Минимальный год не может быть больше максимального")
+            errors = validate_parsed_data(movie_title, min_year, max_year, nsfw)
 
             if errors:
                 self.send_custom_response(errors, resp_code=400, Cont_type="application/json")
@@ -116,33 +121,15 @@ class RequestHandler(BaseHTTPRequestHandler):
                 max_year=max_year,
                 nsfw=nsfw
             )
-            print(f'parsed res: {results}{type(results)}')
             self.send_custom_response(results)
             
         # API для AJAX-запросов
         elif parsed_path.path == "/api/search":
             query = parse_qs(parsed_path.query)
             movie_title, min_year, max_year, nsfw = parse_query(query)
-            print(f'parsed nsfw: {nsfw}{type(nsfw)}')
 
             # Валидация
-            errors = []
-            try:
-                min_year = int(min_year) if min_year else None
-                if min_year and (min_year < 1890 or min_year > 2030):
-                    errors.append("Минимальный год должен быть между 1890 и 2030")
-            except ValueError:
-                errors.append("Некорректный формат минимального года")
-
-            try:
-                max_year = int(max_year) if max_year else None
-                if max_year and (max_year < 1890 or max_year > 2030):
-                    errors.append("Максимальный год должен быть между 1890 и 2030")
-            except ValueError:
-                errors.append("Некорректный формат максимального года")
-
-            if min_year and max_year and min_year > max_year:
-                errors.append("Минимальный год не может быть больше максимального")
+            errors = validate_parsed_data(movie_title, min_year, max_year, nsfw)
 
             if errors:
                 self.send_custom_response(errors, resp_code=400, Cont_type="application/json")
@@ -154,7 +141,6 @@ class RequestHandler(BaseHTTPRequestHandler):
                 max_year=max_year,
                 nsfw=nsfw
             )
-            
             self.send_custom_response(results, Cont_type="application/json", api=True)
 
         # страница 404
