@@ -5,12 +5,30 @@
     <h1>Поиск выдуманных фильмов на любой вкус!</h1>
     
     <div class="search-box">
-        <form action="/search" method="GET">
-            <input type="text"
-                   name="movie"
-                   placeholder="Чего изволим?"
-                   id="searchInput"
-                   autocomplete="off">
+        <form id="searchForm" action="/search" method="GET">
+            <div>
+                <input type="text"
+                       name="movie"
+                       placeholder="Чего изволим?"
+                       id="searchInput"
+                       autocomplete="off">
+            </div>
+            
+            <div class="filters">
+                <div>
+                    <label>Год выпуска:</label>
+                    <input type="number" name="min_year" placeholder="От" min="1890" max="2030">
+                    <input type="number" name="max_year" placeholder="До" min="1890" max="2030">
+                </div>
+                
+                <div>
+                    <label>
+                        <input type="checkbox" name="nsfw" id="nsfwCheckbox">
+                        NSFW
+                    </label>
+                </div>
+            </div>
+            
             <button type="submit">Найти</button>
         </form>
     </div>
@@ -33,16 +51,15 @@
 <script>
     const searchInput = document.getElementById('searchInput');
     const resultsDiv = document.getElementById('results');
+    const searchForm = document.getElementById('searchForm');
+    const nsfwCheckbox = document.getElementById('nsfwCheckbox');
 
-    searchInput.addEventListener('input', async (e) => {
-        const query = e.target.value;
-        if (query.length < 2) {
-            resultsDiv.innerHTML = '';
-            return;
-        }
-
+    async function performSearch() {
+        const formData = new FormData(searchForm);
+        const params = new URLSearchParams(formData).toString();
+        
         try {
-            const response = await fetch(`/api/search?movie=${encodeURIComponent(query)}`);
+            const response = await fetch(`/api/search?${params}`);
             const movies = await response.json();
             
             let html = '';
@@ -65,6 +82,10 @@
         } catch (error) {
             console.error('Ошибка:', error);
         }
-    });
+    }
+
+    // Слушаем все изменения формы
+    searchForm.addEventListener('input', performSearch);
+    nsfwCheckbox.addEventListener('change', performSearch);
 </script>
 {% endblock %}

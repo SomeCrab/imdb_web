@@ -23,18 +23,33 @@ db_config = {
 }
 
 
-def search_movies(title):
+def search_movies(title, min_year=None, max_year=None, nsfw=False):
     try:
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor(dictionary=True)
-        
+        print(f'search_movies: {nsfw}{type(nsfw)}')
         query = """
             SELECT title, description, release_year, rating 
             FROM film 
             WHERE title LIKE %s
-            LIMIT 10
         """
-        cursor.execute(query, (f"%{title}%",))
+        params = [f"%{title}%"]
+
+        # Фильтр по году
+        if min_year:
+            query += " AND release_year >= %s"
+            params.append(min_year)
+        if max_year:
+            query += " AND release_year <= %s"
+            params.append(max_year)
+            
+        # Фильтр NSFW
+        if nsfw:
+            query += " AND rating != 'NC-17'"
+
+        query += " LIMIT 10"
+        
+        cursor.execute(query, params)
         results = cursor.fetchall()
         
         cursor.close()
@@ -72,9 +87,26 @@ class RequestHandler(BaseHTTPRequestHandler):
         # Поиск через форму
         elif parsed_path.path == "/search":
             query = parse_qs(parsed_path.query)
+
+            # TODO рефакторинг DRY
             movie_title = query.get("movie", [""])[0]
-            results = search_movies(movie_title)
+            min_year = query.get("min_year", [None])[0]
+            max_year = query.get("max_year", [None])[0]
+            nsfw = query.get("nsfw", ["false"])[0].lower() == "on"
             
+            try:
+                min_year = int(min_year) if min_year else None
+                max_year = int(max_year) if max_year else None
+            except ValueError:
+                min_year = max_year = None
+            
+            results = search_movies(
+                title=movie_title,
+                min_year=min_year,
+                max_year=max_year,
+                nsfw=nsfw
+            )
+            print(f'parsed res: {results}{type(results)}')
             template = env.get_template('index.html')
             html = template.render(results=results)
             
@@ -86,8 +118,25 @@ class RequestHandler(BaseHTTPRequestHandler):
         # API для AJAX-запросов
         elif parsed_path.path == "/api/search":
             query = parse_qs(parsed_path.query)
+
+            # Парсинг параметров запроса
             movie_title = query.get("movie", [""])[0]
-            results = search_movies(movie_title)
+            min_year = query.get("min_year", [None])[0]
+            max_year = query.get("max_year", [None])[0]
+            nsfw = query.get("nsfw", ["false"])[0].lower() == "on"
+            print(f'parsed nsfw: {nsfw}{type(nsfw)}')
+            try:
+                min_year = int(min_year) if min_year else None
+                max_year = int(max_year) if max_year else None
+            except ValueError:
+                min_year = max_year = None
+            
+            results = search_movies(
+                title=movie_title,
+                min_year=min_year,
+                max_year=max_year,
+                nsfw=nsfw
+            )
             
             self.send_response(200)
             self.send_header("Content-type", "application/json")
