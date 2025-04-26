@@ -52,40 +52,70 @@
     const searchInput = document.getElementById('searchInput');
     const resultsDiv = document.getElementById('results');
     const searchForm = document.getElementById('searchForm');
-    const nsfwCheckbox = document.getElementById('nsfwCheckbox');
+    let searchTimeout;
 
     async function performSearch() {
-        const formData = new FormData(searchForm);
-        const params = new URLSearchParams(formData).toString();
+        clearTimeout(searchTimeout);
         
-        try {
-            const response = await fetch(`/api/search?${params}`);
-            const movies = await response.json();
+        searchTimeout = setTimeout(async () => {
+            const formData = new FormData(searchForm);
+            const minYear = formData.get('min_year');
+            const maxYear = formData.get('max_year');
             
-            let html = '';
-            if (movies.length > 0) {
-                html += `<h2>Найдено фильмов: ${movies.length}</h2>`;
-                movies.forEach(movie => {
-                    html += `
-                        <div class="movie-card">
-                            <h3>${movie.title} (${movie.release_year})</h3>
-                            <p><strong>Описание:</strong> ${movie.description}</p>
-                            <p><strong>MPAA рейтинг:</strong> ${movie.rating}</p>
-                        </div>
-                    `;
-                });
-            } else {
-                html = '<p>Ничего не найдено</p>';
+            // аалидация годов
+            if (minYear && (minYear < 1890 || minYear > 2030)) {
+                resultsDiv.innerHTML = '<p>Минимальный год должен быть между 1890 и 2030.</p>';
+                return;
             }
-            resultsDiv.innerHTML = html;
+            if (maxYear && (maxYear < 1890 || maxYear > 2030)) {
+                resultsDiv.innerHTML = '<p>Максимальный год должен быть между 1890 и 2030.</p>';
+                return;
+            }
+            if (minYear && maxYear && Number(minYear) > Number(maxYear)) {
+                resultsDiv.innerHTML = '<p>Минимальный год не может быть больше максимального.</p>';
+                return;
+            }
             
-        } catch (error) {
-            console.error('Ошибка:', error);
-        }
+            const params = new URLSearchParams(formData).toString();
+            
+            // пустые запросы
+            if (!formData.get('movie') && !minYear && !maxYear) {
+                resultsDiv.innerHTML = '';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/search?${params}`);
+                if (!response.ok) {
+                    throw new Error('Ошибка сервера');
+                }
+                const movies = await response.json();
+                
+                let html = '';
+                if (movies.length > 0) {
+                    html += `<h2>Найдено фильмов: ${movies.length}</h2>`;
+                    movies.forEach(movie => {
+                        html += `
+                            <div class="movie-card">
+                                <h3>${movie.title} (${movie.release_year})</h3>
+                                <p><strong>Описание:</strong> ${movie.description}</p>
+                                <p><strong>Рейтинг:</strong> ${movie.rating}</p>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html = '<p>Ничего не найдено</p>';
+                }
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Ошибка:', error);
+                resultsDiv.innerHTML = '<p>Произошла ошибка при выполнении поиска. Попробуйте позже.</p>';
+            }
+        }, 700); // Задержка в 700 мс
     }
 
-    // Слушаем все изменения формы
+    // слушаем все изменения формы
     searchForm.addEventListener('input', performSearch);
-    nsfwCheckbox.addEventListener('change', performSearch);
 </script>
 {% endblock %}
