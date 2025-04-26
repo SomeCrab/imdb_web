@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+    <h1>Поиск выдуманных фильмов на любой вкус!</h1>
+    
+    <div class="search-box">
+        <form action="/search" method="GET">
+            <input type="text"
+                   name="movie"
+                   placeholder="Чего изволим?"
+                   id="searchInput"
+                   autocomplete="off">
+            <button type="submit">Найти</button>
+        </form>
+    </div>
+    
+    <div id="results">
+        {% if results %}
+            <h2>Найдено фильмов: {{ results|length }}</h2>
+            {% for movie in results %}
+                <div class="movie-card">
+                    <h3>{{ movie.title }} ({{ movie.release_year }})</h3>
+                    <p><strong>Описание:</strong> {{ movie.description }}</p>
+                    <p><strong>MPAA рейтинг:</strong> {{ movie.rating }}</p>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const searchInput = document.getElementById('searchInput');
+    const resultsDiv = document.getElementById('results');
+
+    searchInput.addEventListener('input', async (e) => {
+        const query = e.target.value;
+        if (query.length < 2) {
+            resultsDiv.innerHTML = '';
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/search?movie=${encodeURIComponent(query)}`);
+            const movies = await response.json();
+            
+            let html = '';
+            if (movies.length > 0) {
+                html += `<h2>Найдено фильмов: ${movies.length}</h2>`;
+                movies.forEach(movie => {
+                    html += `
+                        <div class="movie-card">
+                            <h3>${movie.title} (${movie.release_year})</h3>
+                            <p><strong>Описание:</strong> ${movie.description}</p>
+                            <p><strong>MPAA рейтинг:</strong> ${movie.rating}</p>
+                        </div>
+                    `;
+                });
+            } else {
+                html = '<p>Ничего не найдено</p>';
+            }
+            resultsDiv.innerHTML = html;
+            
+        } catch (error) {
+            console.error('Ошибка:', error);
+        }
+    });
+</script>
+{% endblock %}
