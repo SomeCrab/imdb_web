@@ -93,59 +93,66 @@ def validate_parsed_data(movie_title, min_year, max_year, nsfw):
 
 class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        parsed_path = urlparse(self.path)
-        
-        # Главная страница
-        if parsed_path.path == "/":
-            self.send_custom_response(None)
-
-        # страница about
-        elif parsed_path.path == "/about":
-            self.send_custom_response(None, templ='about.html')
+        try:
+            parsed_path = urlparse(self.path)
             
-        # Поиск через форму
-        elif parsed_path.path == "/search":
-            query = parse_qs(parsed_path.query)
-            movie_title, min_year, max_year, nsfw = parse_query(query)
-            
-            # Валидация
-            errors = validate_parsed_data(movie_title, min_year, max_year, nsfw)
+            # Главная страница
+            if parsed_path.path == "/":
+                self.send_custom_response(None)
 
-            if errors:
-                self.send_custom_response(errors, resp_code=400, Cont_type="application/json")
-                return
-            
-            results = search_movies(
-                title=movie_title,
-                min_year=min_year,
-                max_year=max_year,
-                nsfw=nsfw
-            )
-            self.send_custom_response(results)
-            
-        # API для AJAX-запросов
-        elif parsed_path.path == "/api/search":
-            query = parse_qs(parsed_path.query)
-            movie_title, min_year, max_year, nsfw = parse_query(query)
+            # страница about
+            elif parsed_path.path == "/about":
+                self.send_custom_response(None, templ='about.html')
+                
+            # Поиск через форму
+            elif parsed_path.path == "/search":
+                query = parse_qs(parsed_path.query)
+                movie_title, min_year, max_year, nsfw = parse_query(query)
+                
+                # Валидация
+                errors = validate_parsed_data(movie_title, min_year, max_year, nsfw)
 
-            # Валидация
-            errors = validate_parsed_data(movie_title, min_year, max_year, nsfw)
+                if errors:
+                    self.send_custom_response(errors, resp_code=400, Cont_type="application/json")
+                    return
+                
+                results = search_movies(
+                    title=movie_title,
+                    min_year=min_year,
+                    max_year=max_year,
+                    nsfw=nsfw
+                )
+                self.send_custom_response(results)
+                
+            # API для AJAX-запросов
+            elif parsed_path.path == "/api/search":
+                query = parse_qs(parsed_path.query)
+                movie_title, min_year, max_year, nsfw = parse_query(query)
 
-            if errors:
-                self.send_custom_response(errors, resp_code=400, Cont_type="application/json")
-                return
+                # Валидация
+                errors = validate_parsed_data(movie_title, min_year, max_year, nsfw)
+
+                if errors:
+                    self.send_custom_response(errors, resp_code=400, Cont_type="application/json")
+                    return
+                
+                results = search_movies(
+                    title=movie_title,
+                    min_year=min_year,
+                    max_year=max_year,
+                    nsfw=nsfw
+                )
+                self.send_custom_response(results, Cont_type="application/json", api=True)
+
+           # шоукейс ошибки 500
+            elif parsed_path.path == "/err":
+                5/0
             
-            results = search_movies(
-                title=movie_title,
-                min_year=min_year,
-                max_year=max_year,
-                nsfw=nsfw
-            )
-            self.send_custom_response(results, Cont_type="application/json", api=True)
-
-        # страница 404
-        else:
-            self.send_custom_response(None, resp_code=404, templ='not_found.html')
+            # страница 404
+            else:
+                self.send_custom_response(None, resp_code=404, templ='not_found.html')
+        except Exception as e:
+            self.send_custom_response(e, resp_code=500, templ='error.html')
 
     def send_custom_response(self, data, resp_code=200, Cont_type="text/html", templ='index.html', api=False):
         self.send_response(resp_code)
