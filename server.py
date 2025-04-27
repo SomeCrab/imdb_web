@@ -5,6 +5,8 @@ import mysql.connector
 import json
 from dotenv import load_dotenv
 from os import getenv
+from config import Configuration as conf
+
 
 # ! annotation, annotation everywhere
 # Загрузка переменных окружения
@@ -22,8 +24,14 @@ db_config = {
     "raise_on_warnings": True
 }
 
+# Константы
+MAX_ALLOWED_YEAR = conf.MAX_ALLOWED_YEAR
+MIN_ALLOWED_YEAR = conf.MIN_ALLOWED_YEAR
 
-def search_movies(title, min_year=None, max_year=None, nsfw=False):
+
+# TODO: добавить запрос к конкретному году
+def search_movies(title=None, min_year=None, max_year=None, nsfw=False, exact_year=None):
+    print(f'search_movies : {title}, {min_year}, {max_year}, {nsfw}, {exact_year}')
     try:
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor(dictionary=True)
@@ -66,29 +74,55 @@ def parse_query(query):
     min_year = query.get("min_year", [None])[0]
     max_year = query.get("max_year", [None])[0]
     nsfw = query.get("nsfw", ["false"])[0].lower() == "on"
-    return movie_title, min_year, max_year, nsfw
+    exact_year = query.get("exact_year", None)
+    return movie_title, min_year, max_year, nsfw, exact_year
 
-# TODO: Улучшить обработку ошибок и валидацию данных
-def validate_parsed_data(movie_title, min_year, max_year, nsfw):
+# TODO: проверить после добавления exact_year в search_movies()
+def validate_year(value, name):
+    """
+    Преобразует строку в int и проверяет, что год в [YEAR_MIN, YEAR_MAX].
+    Возвращает (год, сообщение об ошибке).
+    """
+    if not value:
+        return None, None
+    try:
+        year = int(value)
+    except ValueError:
+        return None, f"Некорректный формат {name}"
+    if not (MIN_ALLOWED_YEAR <= year <= MAX_ALLOWED_YEAR):
+        return None, f"{name} должен быть между {MIN_ALLOWED_YEAR} и {MAX_ALLOWED_YEAR}"
+    return year, None
+
+
+def validate_parsed_data(movie_title, min_year, max_year, nsfw, exact_year):
     errors = []
-    try:
-        min_year = int(min_year) if min_year else None
-        if min_year and (min_year < 1890 or min_year > 2030):
-            errors.append("Минимальный год должен быть между 1890 и 2030")
-    except ValueError:
-        errors.append("Некорректный формат минимального года")
+    min_y, err = validate_year(min_year, "минимальный год")
+    if err: errors.append(err)
+    print(f'validate_parsed_data min: {min_year}')
 
-    try:
-        max_year = int(max_year) if max_year else None
-        if max_year and (max_year < 1890 or max_year > 2030):
-            errors.append("Максимальный год должен быть между 1890 и 2030")
-    except ValueError:
-        errors.append("Некорректный формат максимального года")
+    max_y, err = validate_year(max_year, "максимальный год")
+    if err: errors.append(err)
+    print(f'validate_parsed_data max: {max_year}')
 
-    if min_year and max_year and min_year > max_year:
-        errors.append("Минимальный год не может быть больше максимального")
-       
-    return errors
+    exact_y, err = validate_year(exact_year, "конкретный год")
+    if err: errors.append(err)
+
+    if exact_y is not None and (min_y is not None or max_y is not None):
+        errors.append("Нельзя указывать конкретный год вместе с диапазоном")
+
+    if exact_y is None:
+        if min_y is not None and max_y is not None and min_y > max_y and max_y < min_year:
+            errors.append("Минимальный год должен быть меньше максимального года")
+
+    validated = {
+        "title": movie_title,
+        "min_year": min_y,
+        "max_year": max_y,
+        "nsfw": nsfw,
+        "exact_year": exact_y
+    }
+    print(f'validate_parsed_data: {validated} , {errors}')
+    return errors, validated
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -107,41 +141,37 @@ class RequestHandler(BaseHTTPRequestHandler):
             # Поиск через форму
             elif parsed_path.path == "/search":
                 query = parse_qs(parsed_path.query)
-                movie_title, min_year, max_year, nsfw = parse_query(query)
-                
+                movie_title, min_year, max_year, nsfw, exact_year = parse_query(query)
+
                 # Валидация
-                errors = validate_parsed_data(movie_title, min_year, max_year, nsfw)
+                validate = validate_parsed_data(movie_title, min_year, max_year, nsfw, exact_year)
+                print(f'validate: {validate}')
+                errors, valid_data = validate[0], validate[1]
+                print(f'### errors, validated ###:\n{errors}, {valid_data} ')
 
                 if errors:
                     self.send_custom_response(errors, resp_code=400, Cont_type="application/json")
                     return
                 
-                results = search_movies(
-                    title=movie_title,
-                    min_year=min_year,
-                    max_year=max_year,
-                    nsfw=nsfw
-                )
+                results = search_movies(**valid_data)
                 self.send_custom_response(results)
                 
             # API для AJAX-запросов
             elif parsed_path.path == "/api/search":
                 query = parse_qs(parsed_path.query)
-                movie_title, min_year, max_year, nsfw = parse_query(query)
+                movie_title, min_year, max_year, nsfw, exact_year = parse_query(query)
 
                 # Валидация
-                errors = validate_parsed_data(movie_title, min_year, max_year, nsfw)
+                validate = validate_parsed_data(movie_title, min_year, max_year, nsfw, exact_year)
+                print(f'validate: {validate}')
+                errors, valid_data = validate[0], validate[1]
+                print(f'### errors, validated ###:\n{errors}, {valid_data} ')
 
                 if errors:
                     self.send_custom_response(errors, resp_code=400, Cont_type="application/json")
                     return
                 
-                results = search_movies(
-                    title=movie_title,
-                    min_year=min_year,
-                    max_year=max_year,
-                    nsfw=nsfw
-                )
+                results = search_movies(**valid_data)
                 self.send_custom_response(results, Cont_type="application/json", api=True)
 
            # шоукейс ошибки 500
