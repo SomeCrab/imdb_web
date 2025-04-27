@@ -31,7 +31,6 @@ MIN_ALLOWED_YEAR = conf.MIN_ALLOWED_YEAR
 
 # TODO: добавить запрос к конкретному году
 def search_movies(title=None, min_year=None, max_year=None, nsfw=False, exact_year=None):
-    print(f'search_movies : {title}, {min_year}, {max_year}, {nsfw}, {exact_year}')
     try:
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor(dictionary=True)
@@ -98,11 +97,9 @@ def validate_parsed_data(movie_title, min_year, max_year, nsfw, exact_year):
     errors = []
     min_y, err = validate_year(min_year, "минимальный год")
     if err: errors.append(err)
-    print(f'validate_parsed_data min: {min_year}')
 
     max_y, err = validate_year(max_year, "максимальный год")
     if err: errors.append(err)
-    print(f'validate_parsed_data max: {max_year}')
 
     exact_y, err = validate_year(exact_year, "конкретный год")
     if err: errors.append(err)
@@ -121,7 +118,6 @@ def validate_parsed_data(movie_title, min_year, max_year, nsfw, exact_year):
         "nsfw": nsfw,
         "exact_year": exact_y
     }
-    print(f'validate_parsed_data: {validated} , {errors}')
     return errors, validated
 
 
@@ -138,41 +134,23 @@ class RequestHandler(BaseHTTPRequestHandler):
             elif parsed_path.path == "/about":
                 self.send_custom_response(None, templ='about.html')
                 
-            # Поиск через форму
-            elif parsed_path.path == "/search":
+            # Поиск через форму и API для AJAX-запросов
+            elif parsed_path.path in ["/api/search", "/search"]:
                 query = parse_qs(parsed_path.query)
                 movie_title, min_year, max_year, nsfw, exact_year = parse_query(query)
 
                 # Валидация
-                validate = validate_parsed_data(movie_title, min_year, max_year, nsfw, exact_year)
-                print(f'validate: {validate}')
-                errors, valid_data = validate[0], validate[1]
-                print(f'### errors, validated ###:\n{errors}, {valid_data} ')
+                errors, valid_data = validate_parsed_data(movie_title, min_year, max_year, nsfw, exact_year)
 
                 if errors:
                     self.send_custom_response(errors, resp_code=400, Cont_type="application/json")
                     return
                 
                 results = search_movies(**valid_data)
-                self.send_custom_response(results)
-                
-            # API для AJAX-запросов
-            elif parsed_path.path == "/api/search":
-                query = parse_qs(parsed_path.query)
-                movie_title, min_year, max_year, nsfw, exact_year = parse_query(query)
-
-                # Валидация
-                validate = validate_parsed_data(movie_title, min_year, max_year, nsfw, exact_year)
-                print(f'validate: {validate}')
-                errors, valid_data = validate[0], validate[1]
-                print(f'### errors, validated ###:\n{errors}, {valid_data} ')
-
-                if errors:
-                    self.send_custom_response(errors, resp_code=400, Cont_type="application/json")
-                    return
-                
-                results = search_movies(**valid_data)
-                self.send_custom_response(results, Cont_type="application/json", api=True)
+                if parsed_path.path == "/api/search":
+                    self.send_custom_response(results, Cont_type="application/json", api=True)
+                else:
+                    self.send_custom_response(results)
 
            # шоукейс ошибки 500
             elif parsed_path.path == "/err":
