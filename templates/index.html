@@ -45,6 +45,20 @@
                 </div>
             
             <button type="submit">Найти</button>
+
+            <fieldset>
+                <legend>Жанры</legend>
+                <div class="genres">
+                    {% for cat in categories %}
+                    <label>
+                        <input type="checkbox" name="categories" value="{{ cat.category_id }}"
+                        {% if cat.category_id in queries.categories %}checked{% endif %}>
+                        {{ cat.name }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </fieldset>
+
         </form>
     </div>
     

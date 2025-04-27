@@ -9,6 +9,7 @@ from config import Configuration as conf
 
 
 # ! annotation, annotation everywhere
+# ! naming
 # Загрузка переменных окружения
 load_dotenv()
 
@@ -29,39 +30,67 @@ MAX_ALLOWED_YEAR = conf.MAX_ALLOWED_YEAR
 MIN_ALLOWED_YEAR = conf.MIN_ALLOWED_YEAR
 
 
-def search_movies(title=None, min_year=None, max_year=None, nsfw=False, exact_year=None):
+def get_all_categories():
     try:
+        connection = mysql.connector.connect(**db_config)
+        cursor  = connection.cursor(dictionary=True)
+        cursor.execute(r"SELECT category_id, name FROM category ORDER BY name")
+        cats = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        return cats
+    except mysql.connector.Error as err:
+        print(f"Ошибка MySQL: {err}")
+        return []
+
+# TODO: вынести формирование query в отдельную функцию
+def search_movies(title=None, min_year=None, max_year=None, nsfw=False, exact_year=None, categories=None):
+    try:
+        # TODO: вынести подключение в отдельную функцию
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor(dictionary=True)
 
-        query = """
-            SELECT title, description, release_year, rating 
-            FROM film 
-            WHERE title LIKE %s
-        """
-        params = [f"%{title}%"]
+        if categories:
+            query = """
+                SELECT DISTINCT f.title, f.description, f.release_year, f.rating
+                FROM film AS f
+                JOIN film_category AS fc ON f.film_id = fc.film_id
+                WHERE fc.category_id IN ({placeholders})
+                  AND f.title LIKE %s
+            """
+            # placeholders = '%s, %s, …' столько, сколько категорий
+            ph = ','.join(['%s'] * len(categories))
+            query = query.format(placeholders=ph)
+            params = [*categories, f"%{title}%"]
+        else:
+            query = """
+                SELECT f.title, f.description, f.release_year, f.rating
+                FROM film AS f
+                WHERE f.title LIKE %s
+            """
+            params = [f"%{title}%"]
 
         # Фильтр по году
         if exact_year:
-            query += " AND release_year = %s"
+            query += " AND f.release_year = %s"
             params.append(exact_year)
         else:
             if min_year:
-                query += " AND release_year >= %s"
+                query += " AND f.release_year >= %s"
                 params.append(min_year)
             if max_year:
-                query += " AND release_year <= %s"
+                query += " AND f.release_year <= %s"
                 params.append(max_year)
             
         # Фильтр исключения NSFW
         if nsfw:
-            query += " AND rating != 'NC-17'"
-        
+            query += " AND f.rating != 'NC-17'"
+        # TODO: переезать на fetchmany
         query += " LIMIT 10"
         
         cursor.execute(query, params)
         results = cursor.fetchall()
-        
+        # TODO: вывести закрытие подключения в отдельную функцию #? завершение программы
         cursor.close()
         connection.close()
         return results
@@ -77,7 +106,8 @@ def parse_query(query):
     max_year = query.get("max_year", [None])[0]
     nsfw = query.get("nsfw", ["false"])[0].lower() == "on"
     exact_year = query.get("exact_year", [None])[0]
-    return movie_title, min_year, max_year, nsfw, exact_year
+    categories = query.get("categories", [])
+    return movie_title, min_year, max_year, nsfw, exact_year, categories
 
 # TODO: проверить после добавления exact_year в search_movies()
 def validate_year(value, name):
@@ -96,7 +126,7 @@ def validate_year(value, name):
     return year, None
 
 
-def validate_parsed_data(movie_title, min_year, max_year, nsfw, exact_year):
+def validate_parsed_data(movie_title, min_year, max_year, nsfw, exact_year, categories):
     errors = []
     min_y, err = validate_year(min_year, "минимальный год")
     if err: errors.append(err)
@@ -114,12 +144,20 @@ def validate_parsed_data(movie_title, min_year, max_year, nsfw, exact_year):
         if min_y is not None and max_y is not None and min_y > max_y and max_y < min_year:
             errors.append("Минимальный год должен быть меньше максимального года")
 
+    valid_cats = []
+    for cid in categories:
+        if cid.isdigit():
+            valid_cats.append(int(cid))
+        else:
+            errors.append(f"Некорректный идентификатор жанра: {cid}")
+
     validated = {
         "title": movie_title,
         "min_year": min_y,
         "max_year": max_y,
         "nsfw": nsfw,
-        "exact_year": exact_y
+        "exact_year": exact_y,
+        "categories": valid_cats
     }
     return errors, validated
 
@@ -131,7 +169,17 @@ class RequestHandler(BaseHTTPRequestHandler):
             
             # Главная страница
             if parsed_path.path == "/":
-                self.send_custom_response(None)
+                all_categories = get_all_categories()
+                empty_queries = {
+                    "title":      "",
+                    "min_year":   None,
+                    "max_year":   None,
+                    "nsfw":       False,
+                    "exact_year": None,
+                    "categories": []
+                }
+
+                self.send_custom_response(data=None, valid_data=empty_queries, templ='index.html', extra={"categories": all_categories})
 
             # страница about
             elif parsed_path.path == "/about":
@@ -140,10 +188,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             # Поиск через форму и API для AJAX-запросов
             elif parsed_path.path in ["/api/search", "/search"]:
                 query = parse_qs(parsed_path.query)
-                movie_title, min_year, max_year, nsfw, exact_year = parse_query(query)
+                movie_title, min_year, max_year, nsfw, exact_year, categories = parse_query(query)
 
                 # Валидация
-                errors, valid_data = validate_parsed_data(movie_title, min_year, max_year, nsfw, exact_year)
+                errors, valid_data = validate_parsed_data(movie_title, min_year, max_year, nsfw, exact_year, categories)
 
                 if errors:
                     self.send_custom_response(errors, resp_code=400, Cont_type="application/json")
@@ -153,7 +201,8 @@ class RequestHandler(BaseHTTPRequestHandler):
                 if parsed_path.path == "/api/search":
                     self.send_custom_response(results, Cont_type="application/json", api=True)
                 else:
-                    self.send_custom_response(results, valid_data)
+                    all_categories = get_all_categories()
+                    self.send_custom_response(results, valid_data, extra={"categories": all_categories})
 
             # шоукейс ошибки 500
             elif parsed_path.path == "/err":
@@ -166,7 +215,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             print(f"Error: {e}")
             self.send_custom_response(e, resp_code=500, templ='error.html')
 
-    def send_custom_response(self, data, valid_data=None, resp_code=200, Cont_type="text/html", templ='index.html', api=False):
+    def send_custom_response(self, data, valid_data=None, resp_code=200, Cont_type="text/html", templ='index.html', api=False, extra=None):
         self.send_response(resp_code)
         self.send_header("Content-type", Cont_type)
         self.end_headers()
@@ -176,9 +225,32 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif api:
             self.wfile.write(json.dumps(data).encode("utf-8"))
         else:
+            args_for_template = {"results": data, "queries": valid_data,}
+            if extra:
+                args_for_template.update(extra)
             template = env.get_template(templ)
-            html = template.render(results=data, queries=valid_data)
+            html = template.render(**args_for_template)
             self.wfile.write(html.encode("utf-8"))
+
+
+        # self.send_response(resp_code)
+        # self.send_header("Content-type", Cont_type)
+        # self.end_headers()
+
+        # if resp_code == 400:
+        #     self.wfile.write(json.dumps({"errors": data}).encode("utf-8"))
+        #     return
+        # if api:
+        #     self.wfile.write(json.dumps(data).encode("utf-8"))
+        #     return
+
+        # ctx = {"results": data, "queries": valid_data,}
+        # if extra:
+        #     ctx.update(extra)
+
+        # html = env.get_template(templ).render(**ctx)
+        # self.wfile.write(html.encode("utf-8"))
+
 
 
 if __name__ == "__main__":
