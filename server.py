@@ -29,7 +29,6 @@ MAX_ALLOWED_YEAR = conf.MAX_ALLOWED_YEAR
 MIN_ALLOWED_YEAR = conf.MIN_ALLOWED_YEAR
 
 
-# TODO: добавить запрос к конкретному году
 def search_movies(title=None, min_year=None, max_year=None, nsfw=False, exact_year=None):
     try:
         connection = mysql.connector.connect(**db_config)
@@ -43,14 +42,18 @@ def search_movies(title=None, min_year=None, max_year=None, nsfw=False, exact_ye
         params = [f"%{title}%"]
 
         # Фильтр по году
-        if min_year:
-            query += " AND release_year >= %s"
-            params.append(min_year)
-        if max_year:
-            query += " AND release_year <= %s"
-            params.append(max_year)
+        if exact_year:
+            query += " AND release_year = %s"
+            params.append(exact_year)
+        else:
+            if min_year:
+                query += " AND release_year >= %s"
+                params.append(min_year)
+            if max_year:
+                query += " AND release_year <= %s"
+                params.append(max_year)
             
-        # Фильтр NSFW
+        # Фильтр исключения NSFW
         if nsfw:
             query += " AND rating != 'NC-17'"
         
@@ -73,7 +76,7 @@ def parse_query(query):
     min_year = query.get("min_year", [None])[0]
     max_year = query.get("max_year", [None])[0]
     nsfw = query.get("nsfw", ["false"])[0].lower() == "on"
-    exact_year = query.get("exact_year", None)
+    exact_year = query.get("exact_year", [None])[0]
     return movie_title, min_year, max_year, nsfw, exact_year
 
 # TODO: проверить после добавления exact_year в search_movies()
@@ -150,9 +153,9 @@ class RequestHandler(BaseHTTPRequestHandler):
                 if parsed_path.path == "/api/search":
                     self.send_custom_response(results, Cont_type="application/json", api=True)
                 else:
-                    self.send_custom_response(results)
+                    self.send_custom_response(results, valid_data)
 
-           # шоукейс ошибки 500
+            # шоукейс ошибки 500
             elif parsed_path.path == "/err":
                 5/0
             
@@ -160,9 +163,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             else:
                 self.send_custom_response(None, resp_code=404, templ='not_found.html')
         except Exception as e:
+            print(f"Error: {e}")
             self.send_custom_response(e, resp_code=500, templ='error.html')
 
-    def send_custom_response(self, data, resp_code=200, Cont_type="text/html", templ='index.html', api=False):
+    def send_custom_response(self, data, valid_data=None, resp_code=200, Cont_type="text/html", templ='index.html', api=False):
         self.send_response(resp_code)
         self.send_header("Content-type", Cont_type)
         self.end_headers()
@@ -173,7 +177,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(data).encode("utf-8"))
         else:
             template = env.get_template(templ)
-            html = template.render(results=data)
+            html = template.render(results=data, queries=valid_data)
             self.wfile.write(html.encode("utf-8"))
 
 

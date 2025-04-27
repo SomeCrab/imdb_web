@@ -11,23 +11,38 @@
                        name="movie"
                        placeholder="Чего изволим?"
                        id="searchInput"
-                       autocomplete="off">
+                       autocomplete="off"
+                       value="{{ queries.title if queries.title else '' }}">
+
             </div>
-            
-            <div class="filters">
-                <div>
-                    <label>Год выпуска:</label>
-                    <input type="number" name="min_year" placeholder="От" min="1890" max="2030">
-                    <input type="number" name="max_year" placeholder="До" min="1890" max="2030">
+                <div class="filters">
+                    <div>
+                        <label>
+                        <input type="checkbox" id="yearToggle" {% if queries.min_year or queries.max_year %}checked{% endif %}>
+                        По диапазону
+                        </label>
+                    </div>
+<!-- !!! ВЫНЕСИ СКРИПТЫ В ОТДЕЛЬНЫЙ ФАЙЛ !!! -->
+                    <div id="exactContainer">
+                        <label>Точный год:</label>
+                        <input type="number" name="exact_year" id="exactInput" placeholder="Год" min="1890" max="2030"
+                            value="{{ queries.exact_year if queries.exact_year else '' }}">
+                    </div>
+
+                    <div id="rangeContainer" style="display: {% if queries.min_year or queries.max_year %}block{% else %}none{% endif %};">
+                        <label>Диапазон года:</label>
+                        <input type="number" name="min_year" id="minInput" placeholder="От" min="1890" max="2030"
+                            value="{{ queries.min_year if queries.min_year else '' }}">
+                        <input type="number" name="max_year" id="maxInput" placeholder="До" min="1890" max="2030"
+                            value="{{ queries.max_year if queries.max_year else '' }}">
+                    </div>
+                        <div>
+                            <label>
+                                <input type="checkbox" name="nsfw" id="nsfwCheckbox" {% if queries.nsfw %}checked{% endif %}>
+                                Exclude NSFW
+                            </label>
+                        </div>
                 </div>
-                
-                <div>
-                    <label>
-                        <input type="checkbox" name="nsfw" id="nsfwCheckbox">
-                        Exclude NSFW
-                    </label>
-                </div>
-            </div>
             
             <button type="submit">Найти</button>
         </form>
@@ -49,6 +64,57 @@
 
 {% block scripts %}
 <script>
+// скрипт для переключения между годом и диапозоном
+document.addEventListener('DOMContentLoaded', () => {
+    const toggle   = document.getElementById('yearToggle');
+    const exactCt  = document.getElementById('exactContainer');
+    const rangeCt  = document.getElementById('rangeContainer');
+    const exactInp = document.getElementById('exactInput');
+    const minInp   = document.getElementById('minInput');
+    const maxInp   = document.getElementById('maxInput');
+
+    function update() {
+    if (toggle.checked) {
+        // переключение на диапазон
+        exactCt.style.display = 'none';
+        exactInp.disabled      = true;
+
+        rangeCt.style.display = 'block';
+        minInp.disabled       = false;
+        maxInp.disabled       = false;
+
+        // при первом переключении: перенести значение точного года в min, если он был заполнен
+        if (exactInp.value && !minInp.value) {
+        minInp.value = exactInp.value;
+        }
+    } else {
+        // переключение обратно на единичный год
+        rangeCt.style.display = 'none';
+        minInp.disabled       = true;
+        maxInp.disabled       = true;
+
+        exactCt.style.display = 'block';
+        exactInp.disabled      = false;
+
+        // перенос min в exact и очистка диапазона
+        if (minInp.value && !exactInp.value) {
+        exactInp.value = minInp.value;
+        }
+        minInp.value = '';
+        maxInp.value = '';
+    }
+    }
+
+    // инициализатор
+    update();
+
+    // прослушка кнопки
+    toggle.addEventListener('change', update);
+});
+</script>
+
+<script>
+// скрипт для обработки поиска
     const searchInput = document.getElementById('searchInput');
     const resultsDiv = document.getElementById('results');
     const searchForm = document.getElementById('searchForm');
@@ -59,10 +125,15 @@
         
         searchTimeout = setTimeout(async () => {
             const formData = new FormData(searchForm);
+            const exactYear = formData.get('exact_year');
             const minYear = formData.get('min_year');
             const maxYear = formData.get('max_year');
             
             // аалидация годов
+            if (exactYear && (exactYear < 1890 || exactYear > 2030)) {
+                resultsDiv.innerHTML = '<p>Год должен быть между 1890 и 2030.</p>';
+                return;
+            }
             if (minYear && (minYear < 1890 || minYear > 2030)) {
                 resultsDiv.innerHTML = '<p>Минимальный год должен быть между 1890 и 2030.</p>';
                 return;
@@ -79,7 +150,7 @@
             const params = new URLSearchParams(formData).toString();
             
             // пустые запросы
-            if (!formData.get('movie') && !minYear && !maxYear) {
+            if (!formData.get('movie') && !minYear && !maxYear && !exactYear) {
                 resultsDiv.innerHTML = '';
                 return;
             }
@@ -100,7 +171,7 @@
                             <div class="movie-card">
                                 <h3>${movie.title} (${movie.release_year})</h3>
                                 <p><strong>Описание:</strong> ${movie.description}</p>
-                                <p><strong>Рейтинг:</strong> ${movie.rating}</p>
+                                <p><strong>MPAA рейтинг:</strong> ${movie.rating}</p>
                             </div>
                         `;
                     });
