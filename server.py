@@ -6,7 +6,7 @@ import json
 from dotenv import load_dotenv
 from os import getenv
 
-
+# ! annotation, annotation everywhere
 # Загрузка переменных окружения
 load_dotenv()
 
@@ -27,7 +27,7 @@ def search_movies(title, min_year=None, max_year=None, nsfw=False):
     try:
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor(dictionary=True)
-        print(f'search_movies: {nsfw}{type(nsfw)}')
+
         query = """
             SELECT title, description, release_year, rating 
             FROM film 
@@ -46,7 +46,7 @@ def search_movies(title, min_year=None, max_year=None, nsfw=False):
         # Фильтр NSFW
         if nsfw:
             query += " AND rating != 'NC-17'"
-
+        
         query += " LIMIT 10"
         
         cursor.execute(query, params)
@@ -68,7 +68,7 @@ def parse_query(query):
     nsfw = query.get("nsfw", ["false"])[0].lower() == "on"
     return movie_title, min_year, max_year, nsfw
 
-
+# TODO: Улучшить обработку ошибок и валидацию данных
 def validate_parsed_data(movie_title, min_year, max_year, nsfw):
     errors = []
     try:
@@ -148,20 +148,18 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_custom_response(None, resp_code=404, templ='not_found.html')
 
     def send_custom_response(self, data, resp_code=200, Cont_type="text/html", templ='index.html', api=False):
-        if not api:
-            template = env.get_template(templ)
-            html = template.render(results=data)
         self.send_response(resp_code)
         self.send_header("Content-type", Cont_type)
         self.end_headers()
-        if resp_code == 404:
-            self.wfile.write(html.encode("utf-8"))
-        elif resp_code == 400:
+        
+        if resp_code == 400:
             self.wfile.write(json.dumps({"errors": data}).encode("utf-8"))
-        elif not api:
-            self.wfile.write(html.encode("utf-8"))
-        else:
+        elif api:
             self.wfile.write(json.dumps(data).encode("utf-8"))
+        else:
+            template = env.get_template(templ)
+            html = template.render(results=data)
+            self.wfile.write(html.encode("utf-8"))
 
 
 if __name__ == "__main__":
