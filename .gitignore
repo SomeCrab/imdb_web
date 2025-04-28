@@ -25,6 +25,9 @@ instance/
 # images
 static/images
 
+# logging file
+app_errors.log
+
 # test items
 templates/test
 test/
