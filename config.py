@@ -10,10 +10,8 @@ MIN_ALLOWED_YEAR = 1890
 SERVER_HOST = 'localhost'
 SERVER_PORT = 8000
 
-# Загрузка переменных окружения
-load_dotenv()
-
 # Конфигурация MySQL
+load_dotenv()
 DB_CONFIG = {
     "host": getenv('HOST_READ'),
     "user": getenv('USER_READ'),

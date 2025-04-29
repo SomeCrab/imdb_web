@@ -3,27 +3,28 @@ from urllib.parse import urlparse, parse_qs
 from jinja2 import Environment, FileSystemLoader
 import mysql.connector
 from contextlib import contextmanager
-import logging
+import logging.config
+from inspect import stack
+import pathlib
 import json
 from config import MAX_ALLOWED_YEAR, MIN_ALLOWED_YEAR, SERVER_HOST, SERVER_PORT, DB_CONFIG as db_config
 
 
-# ! annotation, annotation everywhere
-# ! naming
 # Настройка Jinja2
 env = Environment(loader=FileSystemLoader('templates'))
 
 # логирование
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
-file_handler = logging.FileHandler('app_errors.log', encoding='utf-8')
-formatter = logging.Formatter(
-    '%(asctime)s %(levelname)s %(name)s: %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
+def setup_logging():
+    log_dir = pathlib.Path("logs")
+    log_dir.mkdir(exist_ok=True)
 
+    config_file = pathlib.Path("logging_config/config.json")
+    with open(config_file) as f_in:
+        config = json.load(f_in)
+    logging.config.dictConfig(config=config)
+
+
+logger = logging.getLogger(__name__)
 
 # db stuff
 @contextmanager
@@ -208,13 +209,15 @@ class RequestHandler(BaseHTTPRequestHandler):
 
             # шоукейс ошибки 500
             elif parsed_path.path == "/err":
-                5/0
-            
+                1/0
+                
             # страница 404
             else:
+                logger.info(f"User tried to load '{parsed_path.path}'")
                 self.send_custom_response(None, resp_code=404, templ='not_found.html')
+
         except Exception as e:
-            print(f"Error: {e}")
+            logger.error(f"Inside '{stack()[0][3]}' :{e}")
             self.send_custom_response(e, resp_code=500, templ='error.html')
 
     def send_custom_response(self, data, valid_data=None, resp_code=200, Cont_type="text/html", templ='index.html', api=False, cats_sent=None):
@@ -235,8 +238,14 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(html.encode("utf-8"))
 
 
-if __name__ == "__main__":
+# main
+def main():
+    setup_logging()
     server_address = (SERVER_HOST, SERVER_PORT)
     httpd = HTTPServer(server_address, RequestHandler)
     print(f"Сервер запущен на http://{SERVER_HOST}:{SERVER_PORT}")
     httpd.serve_forever()
+
+
+if __name__ == "__main__":
+    main()

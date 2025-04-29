@@ -25,7 +25,8 @@ instance/
 # images
 static/images
 
-# logging file
+# logging
+logs/
 app_errors.log
 
 # test items
