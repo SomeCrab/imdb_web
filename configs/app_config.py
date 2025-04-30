@@ -1,6 +1,13 @@
 from dotenv import load_dotenv
 from os import getenv
+from pathlib import Path
 
+
+# Пути
+BASE_DIR = Path(__file__).parent.parent
+TEMPLATES_DIR = BASE_DIR / "templates"
+LOG_DIR = BASE_DIR / "logs"
+LOGGING_CONFIG_FILE = BASE_DIR / "configs" / "logging_config" / "config.json"
 
 # константы
 MAX_ALLOWED_YEAR = 2030

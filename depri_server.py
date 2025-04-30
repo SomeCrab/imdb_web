@@ -7,7 +7,7 @@ import logging.config
 from inspect import stack
 import pathlib
 import json
-from config import MAX_ALLOWED_YEAR, MIN_ALLOWED_YEAR, SERVER_HOST, SERVER_PORT, DB_CONFIG as db_config
+from configs.app_config import MAX_ALLOWED_YEAR, MIN_ALLOWED_YEAR, SERVER_HOST, SERVER_PORT, DB_CONFIG as db_config
 
 
 # Настройка Jinja2
@@ -18,7 +18,7 @@ def setup_logging():
     log_dir = pathlib.Path("logs")
     log_dir.mkdir(exist_ok=True)
 
-    config_file = pathlib.Path("logging_config/config.json")
+    config_file = pathlib.Path("configs/logging_config/config.json")
     with open(config_file) as f_in:
         config = json.load(f_in)
     logging.config.dictConfig(config=config)
