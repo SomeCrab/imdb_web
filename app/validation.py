@@ -22,7 +22,15 @@ def validate_year(value, name):
     return year, None
 
 
-def validate_parsed_data(movie_title, min_year, max_year, nsfw, exact_year, categories):
+def validate_parsed_data(
+        movie_title='',
+        min_year=None,
+        max_year=None,
+        nsfw='false',
+        exact_year=None,
+        categories=[]
+        ):
+    
     errors = []
     min_y, err = validate_year(min_year, "минимальный год")
     if err: errors.append(err)

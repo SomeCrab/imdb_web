@@ -12,20 +12,23 @@ logger = logging.getLogger(__name__)
 env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
 
-def parse_query(query):
-    movie_title = query.get("movie", [""])[0]
-    min_year = query.get("min_year", [None])[0]
-    max_year = query.get("max_year", [None])[0]
-    nsfw = query.get("nsfw", ["false"])[0].lower() == "on"
-    exact_year = query.get("exact_year", [None])[0]
-    categories = query.get("categories", [])
-    return movie_title, min_year, max_year, nsfw, exact_year, categories
-
-
 class RequestHandler(BaseHTTPRequestHandler):
+    def _parse_query(self):
+        query = parse_qs(urlparse(self.path).query)
+        return {
+            'movie_title': query.get('movie', [''])[0],
+            'min_year': query.get('min_year', [None])[0],
+            'max_year': query.get('max_year', [None])[0],
+            'nsfw': query.get('nsfw', ['false'])[0].lower() == 'on',
+            'exact_year': query.get('exact_year', [None])[0],
+            'categories': query.get('categories', [])
+        }
+
+
     def do_GET(self):
         try:
             parsed_path = urlparse(self.path)
+            parsed_query = self._parse_query()
             if parsed_path.path in ["/", "/search"]:
                 all_categories = get_all_categories()
             
@@ -39,11 +42,9 @@ class RequestHandler(BaseHTTPRequestHandler):
                 
             # Поиск через форму и API для AJAX-запросов
             elif parsed_path.path in ["/api/search", "/search"]:
-                query = parse_qs(parsed_path.query)
-                movie_title, min_year, max_year, nsfw, exact_year, categories = parse_query(query)
 
                 # Валидация
-                errors, valid_data = validate_parsed_data(movie_title, min_year, max_year, nsfw, exact_year, categories)
+                errors, valid_data = validate_parsed_data(**parsed_query)
 
                 if errors:
                     self.send_custom_response(errors, resp_code=400, Cont_type="application/json")
@@ -53,7 +54,6 @@ class RequestHandler(BaseHTTPRequestHandler):
                 if parsed_path.path == "/api/search":
                     self.send_custom_response(results, Cont_type="application/json", api=True)
                 else:
-                    #all_categories = get_all_categories()
                     self.send_custom_response(results, valid_data, cats_sent={"categories": all_categories})
 
             # шоукейс ошибки 500
