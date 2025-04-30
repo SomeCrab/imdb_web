@@ -38,7 +38,15 @@ def get_all_categories():
         return []
 
 
-def make_qerry(title=None, min_year=None, max_year=None, nsfw=False, exact_year=None, categories=None):
+def make_qerry(
+        title=None,
+        min_year=None,
+        max_year=None,
+        nsfw=False,
+        exact_year=None,
+        categories=None,
+        limit=None
+    ):
     if categories:
         query = """
             SELECT DISTINCT f.title, f.description, f.release_year, f.rating
@@ -74,8 +82,10 @@ def make_qerry(title=None, min_year=None, max_year=None, nsfw=False, exact_year=
     # Фильтр исключения NSFW
     if nsfw:
         query += " AND f.rating != 'NC-17'"
-    # TODO: переезать на fetchmany
-    query += " LIMIT 10"
+    
+    if limit is not None:
+        query += " LIMIT %s"
+        params.append(limit)
 
     return query, params
 

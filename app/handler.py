@@ -4,7 +4,7 @@ import json
 import logging
 from inspect import stack
 from jinja2 import Environment, FileSystemLoader
-from configs.app_config import TEMPLATES_DIR
+from configs.app_config import TEMPLATES_DIR, LIMIT
 from app.database import get_all_categories, search_movies
 from app.validation import validate_parsed_data
 
@@ -14,15 +14,20 @@ env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
 class RequestHandler(BaseHTTPRequestHandler):
     def _parse_query(self):
-        query = parse_qs(urlparse(self.path).query)
-        return {
-            'movie_title': query.get('movie', [''])[0],
-            'min_year': query.get('min_year', [None])[0],
-            'max_year': query.get('max_year', [None])[0],
-            'nsfw': query.get('nsfw', ['false'])[0].lower() == 'on',
-            'exact_year': query.get('exact_year', [None])[0],
-            'categories': query.get('categories', [])
-        }
+        try:
+            query = parse_qs(urlparse(self.path).query)
+            return {
+                'movie_title': query.get('movie', [''])[0],
+                'min_year': query.get('min_year', [None])[0],
+                'max_year': query.get('max_year', [None])[0],
+                'nsfw': query.get('nsfw', ['false'])[0].lower() == 'on',
+                'exact_year': query.get('exact_year', [None])[0],
+                'categories': query.get('categories', []),
+                'limit': query.get('limit', [None])[0]
+            }
+        except Exception as e:
+            logger.error(f"Inside '{stack()[0][3]}' :{e}")
+            return {}
 
 
     def do_GET(self):
@@ -42,7 +47,8 @@ class RequestHandler(BaseHTTPRequestHandler):
                 
             # Поиск через форму и API для AJAX-запросов
             elif parsed_path.path in ["/api/search", "/search"]:
-
+                if parsed_path.path == "/api/search":
+                    parsed_query['limit'] = LIMIT
                 # Валидация
                 errors, valid_data = validate_parsed_data(**parsed_query)
 

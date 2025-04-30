@@ -1,4 +1,4 @@
-from configs.app_config import MIN_ALLOWED_YEAR, MAX_ALLOWED_YEAR
+from configs.app_config import MIN_ALLOWED_YEAR, MAX_ALLOWED_YEAR, LIMIT
 import logging
 from inspect import stack
 
@@ -28,22 +28,22 @@ def validate_parsed_data(
         max_year=None,
         nsfw='false',
         exact_year=None,
-        categories=[]
+        categories=[],
+        limit=None
         ):
     
     errors = []
-    min_y, err = validate_year(min_year, "минимальный год")
-    if err: errors.append(err)
+    min_y, err0 = validate_year(min_year, "минимальный год")
+    if err0: errors.append(err0)
 
-    max_y, err = validate_year(max_year, "максимальный год")
-    if err: errors.append(err)
+    max_y, err1 = validate_year(max_year, "максимальный год")
+    if err1: errors.append(err1)
 
-    exact_y, err = validate_year(exact_year, "конкретный год")
-    if err: errors.append(err)
+    exact_y, err2 = validate_year(exact_year, "конкретный год")
+    if err2: errors.append(err2)
 
     if exact_y is not None and (min_y is not None or max_y is not None):
-        logger.debug(f"Inside '{stack()[0][3]}', пользователь пытается вводить данные прямо в query")
-        errors.append("Нельзя указывать конкретный год вместе с диапазоном")
+        logger.debug(f"Inside '{stack()[0][3]}', bag of bones tried to change the query directly")
 
     if exact_y is None and min_y is not None and max_y is not None:
         if min_y > max_y:
@@ -58,12 +58,17 @@ def validate_parsed_data(
             logger.debug(f"Inside '{stack()[0][3]}', id {cid} must be 'int' not {type(cid)}")
             errors.append(f"Некорректный идентификатор жанра: {cid}")
 
+    if limit and (not isinstance(limit, int) or limit < 0 or limit > LIMIT):
+        logger.debug(f"Inside '{stack()[0][3]}', bag of bones tried to change 'limit': {limit}")
+        limit = LIMIT
+
     validated = {
         "title": movie_title,
         "min_year": min_y,
         "max_year": max_y,
         "nsfw": nsfw,
         "exact_year": exact_y,
-        "categories": valid_cats
+        "categories": valid_cats,
+        "limit": limit
     }
     return errors, validated

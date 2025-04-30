@@ -12,6 +12,7 @@ LOGGING_CONFIG_FILE = BASE_DIR / "configs" / "logging_config" / "config.json"
 # константы
 MAX_ALLOWED_YEAR = 2030
 MIN_ALLOWED_YEAR = 1890
+LIMIT = 50
 
 # настройка сервера
 SERVER_HOST = 'localhost'
