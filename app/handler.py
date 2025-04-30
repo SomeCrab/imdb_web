@@ -62,7 +62,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 
             # страница 404
             else:
-                logger.info(f"User tried to load '{parsed_path.path}'")
+                logger.debug(f"User tried to load '{parsed_path.path}'")
                 self.send_custom_response(None, resp_code=404, templ='not_found.html')
 
         except Exception as e:

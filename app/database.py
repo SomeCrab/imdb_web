@@ -33,7 +33,8 @@ def get_all_categories():
         with db_cursor() as cursor:
             cursor.execute(r"SELECT category_id, name FROM category ORDER BY name")
             return cursor.fetchall()
-    except mysql.connector.Error:
+    except Exception as e:
+        logger.error(f"Inside '{stack()[0][3]}' :{e}")
         return []
 
 
@@ -86,5 +87,6 @@ def search_movies(valid_data):
             results = cursor.fetchall()
         return results
         
-    except mysql.connector.Error:
+    except Exception as e:
+        logger.error(f"Inside '{stack()[0][3]}' :{e}")
         return []
