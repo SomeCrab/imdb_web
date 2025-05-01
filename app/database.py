@@ -8,8 +8,16 @@ from hashlib import md5
 logger = logging.getLogger(__name__)
 
 
-@contextmanager
-def db_cursor(dictionary=True):
+@contextmanager # to be able using with
+def db_cursor(dictionary: bool=True):
+    """context manager for working with DB
+    
+    Args:
+        dictionary: returns dictionary by default
+        
+    Yields:
+        MySQLCursor | MySQLCursorDict: Курсор для работы с БД
+    """
     connection = None
     cursor = None
     try:
@@ -29,7 +37,8 @@ def db_cursor(dictionary=True):
             connection.close()
 
 
-def get_all_categories():
+def get_all_categories() -> list:
+    '''Returns a list of all categories'''
     try:
         with db_cursor() as cursor:
             cursor.execute(r"SELECT category_id, name FROM category ORDER BY name")
@@ -40,14 +49,14 @@ def get_all_categories():
 
 
 def make_qerry(
-        title=None,
-        min_year=None,
-        max_year=None,
-        nsfw=False,
-        exact_year=None,
-        categories=None,
-        limit=None
-    ):
+        title: str=None,
+        min_year: int=None,
+        max_year: int=None,
+        nsfw: str=False,
+        exact_year: int=None,
+        categories: list=None,
+        limit: int=None
+    ) -> tuple[str, list | list[str]]:
     if categories:
         query = """
             SELECT DISTINCT f.title, f.description, f.release_year, f.rating
@@ -93,6 +102,7 @@ def make_qerry(
 
 # TODO: bring it out to debug_utils.py
 def _set_counter(query, new_count):
+    '''Debugging func to set counter for views'''
     query_hash = md5(query.encode()).hexdigest()
     
     with db_cursor() as cursor:
@@ -109,7 +119,8 @@ def _set_counter(query, new_count):
 # _set_counter("/search?movie=monkeyshines&exact_year=", 40)
 
 
-def log_search(query, title= "Many results"):
+def log_search(query:str, title:str= "Many results") -> (list | None):
+    '''Creates or updates info on views in db'''
     try:
         query_hash = md5(query.encode()).hexdigest()
         
@@ -127,7 +138,8 @@ def log_search(query, title= "Many results"):
         return []
 
 
-def get_popular_searches(limit=10):
+def get_popular_searches(limit:int=10) -> list:
+    '''returns a list of most popular searches'''
     try:
         with db_cursor() as cursor:
             cursor.execute(f"""
@@ -142,7 +154,7 @@ def get_popular_searches(limit=10):
         return []
 
 
-def search_movies(valid_data):
+def search_movies(valid_data:dict) -> list:
     try:
         with db_cursor() as cursor:
             cursor.execute(*make_qerry(**valid_data))

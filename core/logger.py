@@ -3,7 +3,8 @@ import json
 from configs.app_config import LOG_DIR, LOGGING_CONFIG_FILE
 
 
-def setup_logging():
+def setup_logging() -> None:
+    '''Sets the logger up'''
     LOG_DIR.mkdir(exist_ok=True)
 
     with open(LOGGING_CONFIG_FILE) as f_in:

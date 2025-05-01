@@ -23,7 +23,7 @@ instance/
 .Python
 
 # images
-static/images
+static/
 
 # logging
 logs/

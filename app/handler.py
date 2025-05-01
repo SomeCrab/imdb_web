@@ -41,17 +41,17 @@ class RequestHandler(BaseHTTPRequestHandler):
             # Главная страница
             if parsed_path.path == "/":
                 popular_searches = get_popular_searches(10)
-                print(popular_searches)
                 self.send_custom_response(
                     data=None,
-                    cats_sent={
+                    extras={
                         "categories": all_categories,
-                        "popular_searches": popular_searches
+                        "popular_searches": popular_searches,
+                        'cur_path': parsed_path.path
                         })
 
             # страница about
             elif parsed_path.path == "/about":
-                self.send_custom_response(None, templ='about.html')
+                self.send_custom_response(None, templ='about.html', extras={'cur_path': parsed_path.path})
                 
             # Поиск через форму и API для AJAX-запросов
             elif parsed_path.path in ["/api/search", "/search"]:
@@ -74,7 +74,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                             log_search(full_query.lower(), results[0]['title'] if len(results) == 1 else 'Many results')
                         except Exception as e:
                             logger.error("Failed to log search query: %s", e)
-                    self.send_custom_response(results, valid_data, cats_sent={"categories": all_categories})
+                    self.send_custom_response(results, valid_data, extras={"categories": all_categories, 'cur_path': parsed_path.path})
 
             # шоукейс ошибки 500
             elif parsed_path.path == "/err":
@@ -83,13 +83,13 @@ class RequestHandler(BaseHTTPRequestHandler):
             # страница 404
             else:
                 logger.debug(f"User tried to load '{parsed_path.path}'")
-                self.send_custom_response(None, resp_code=404, templ='not_found.html')
+                self.send_custom_response(None, resp_code=404, templ='not_found.html', extras={'cur_path': parsed_path.path})
 
         except Exception as e:
             logger.error(f"Inside '{stack()[0][3]}' :{e}")
-            self.send_custom_response(e, resp_code=500, templ='error.html')
+            self.send_custom_response(e, resp_code=500, templ='error.html', extras={'cur_path': parsed_path.path})
 
-    def send_custom_response(self, data, valid_data=None, resp_code=200, Cont_type="text/html", templ='index.html', api=False, cats_sent=None):
+    def send_custom_response(self, data, valid_data=None, resp_code=200, Cont_type="text/html", templ='index.html', api=False, extras=None):
         self.send_response(resp_code)
         self.send_header("Content-type", Cont_type)
         self.end_headers()
@@ -100,8 +100,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(data).encode("utf-8"))
         else:
             kwargs_for_template = {"results": data, "queries": valid_data,}
-            if cats_sent:
-                kwargs_for_template.update(cats_sent)
+            if extras:
+                kwargs_for_template.update(extras)
             template = env.get_template(templ)
             html = template.render(**kwargs_for_template)
             self.wfile.write(html.encode("utf-8"))

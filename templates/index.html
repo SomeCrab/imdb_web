@@ -62,6 +62,7 @@
         </form>
     </div>
 
+{% if cur_path and cur_path == '/' %}
     <div class="popular-searches">
         <h3>Популярные запросы:</h3>
         <ul>
@@ -70,13 +71,14 @@
                 <a href="{{ search.search_query }}">
                     {{ search.title }}
                 </a>
-                <span class="counter">({{ search.counter }})</span>
+                <span class="counter">({{ search.counter }} запросов.)</span>
             </li>
             {% else %}
             <li>Популярные запросы пока отсутствуют</li>
             {% endfor %}
         </ul>
     </div>
+{% endif %}
 
     <div id="results">
         {% if results %}
