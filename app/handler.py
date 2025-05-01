@@ -5,7 +5,7 @@ import logging
 from inspect import stack
 from jinja2 import Environment, FileSystemLoader
 from configs.app_config import TEMPLATES_DIR, LIMIT
-from app.database import get_all_categories, search_movies
+from app.database import get_all_categories, search_movies, log_search
 from app.validation import validate_parsed_data
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         try:
             parsed_path = urlparse(self.path)
             parsed_query = self._parse_query()
+            full_query = parsed_path.path + '?' + parsed_path.query
             if parsed_path.path in ["/", "/search"]:
                 all_categories = get_all_categories()
             
@@ -57,9 +58,15 @@ class RequestHandler(BaseHTTPRequestHandler):
                     return
                 
                 results = search_movies(valid_data)
+
                 if parsed_path.path == "/api/search":
                     self.send_custom_response(results, Cont_type="application/json", api=True)
                 else:
+                    if results:
+                        try:
+                            log_search(full_query.lower())
+                        except Exception as e:
+                            logger.error("Failed to log search query: %s", e)
                     self.send_custom_response(results, valid_data, cats_sent={"categories": all_categories})
 
             # шоукейс ошибки 500

@@ -20,10 +20,11 @@ SERVER_PORT = 8000
 
 # Конфигурация MySQL
 load_dotenv()
+STATS_DB_NAME = getenv('STATS_DB_NAME')
 DB_CONFIG = {
-    "host": getenv('HOST_READ'),
-    "user": getenv('USER_READ'),
-    "password": getenv('PASSWORD_READ'),
-    "database": getenv('NAME_READ'),
+    "host": getenv('HOST_WRITE'),
+    "user": getenv('USER_WRITE'),
+    "password": getenv('PASSWORD_WRITE'),
+    "database": getenv('NAME_WRITE'),
     "raise_on_warnings": True
 }

@@ -1,8 +1,9 @@
 import mysql.connector
 from contextlib import contextmanager
-from configs.app_config import DB_CONFIG
+from configs.app_config import DB_CONFIG, STATS_DB_NAME
 import logging
 from inspect import stack
+from hashlib import md5
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +89,42 @@ def make_qerry(
         params.append(limit)
 
     return query, params
+
+
+# TODO: bring it out to debug_utils.py
+def _set_counter(query, new_count):
+    query_hash = md5(query.encode()).hexdigest()
+    
+    with db_cursor() as cursor:
+        cursor.execute(f"""
+            UPDATE {STATS_DB_NAME}.popular_searches 
+            SET counter = %s 
+            WHERE query_hash = %s
+        """, (new_count, query_hash))
+        logger.info(f"Updated {query} to {new_count}")
+
+
+## _set_counter("/search?movie=lexx&exact_year=", 150500)
+
+
+def log_search(query):
+    query_hash = md5(query.encode('utf-8')).hexdigest()
+    try:
+        with db_cursor() as cursor:
+            cursor.execute(f"""
+                INSERT INTO {STATS_DB_NAME}.popular_searches
+                    (query_hash, search_query, counter)
+                VALUES
+                    (%s, %s, 1)
+                ON DUPLICATE KEY UPDATE
+                    counter = counter + 1,
+                    last_accessed = CURRENT_TIMESTAMP
+            """, (query_hash, query))
+    except Exception as e:
+        logger.error(f"Inside '{stack()[0][3]}' :{e}")
+        return []
+
+
 
 
 def search_movies(valid_data):
