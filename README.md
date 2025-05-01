@@ -39,7 +39,7 @@ Contained in `requirements.txt`
 
 **Step-by-step guide:**
 ```bash
-git clone <repository-url>
+git clone [<repository-url>](https://github.com/SomeCrab/imdb_web)
 pip install -r requirements.txt
 # Set up database configuration in .env file
 python run.py
