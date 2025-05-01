@@ -5,7 +5,7 @@ import logging
 from inspect import stack
 from jinja2 import Environment, FileSystemLoader
 from configs.app_config import TEMPLATES_DIR, LIMIT
-from app.database import get_all_categories, search_movies, log_search
+from app.database import get_all_categories, search_movies, log_search, get_popular_searches
 from app.validation import validate_parsed_data
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,14 @@ class RequestHandler(BaseHTTPRequestHandler):
             
             # Главная страница
             if parsed_path.path == "/":
-                self.send_custom_response(data=None, cats_sent={"categories": all_categories})
+                popular_searches = get_popular_searches(10)
+                print(popular_searches)
+                self.send_custom_response(
+                    data=None,
+                    cats_sent={
+                        "categories": all_categories,
+                        "popular_searches": popular_searches
+                        })
 
             # страница about
             elif parsed_path.path == "/about":
@@ -64,7 +71,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 else:
                     if results:
                         try:
-                            log_search(full_query.lower())
+                            log_search(full_query.lower(), results[0]['title'] if len(results) == 1 else 'Many results')
                         except Exception as e:
                             logger.error("Failed to log search query: %s", e)
                     self.send_custom_response(results, valid_data, cats_sent={"categories": all_categories})

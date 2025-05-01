@@ -97,34 +97,49 @@ def _set_counter(query, new_count):
     
     with db_cursor() as cursor:
         cursor.execute(f"""
-            UPDATE {STATS_DB_NAME}.popular_searches 
-            SET counter = %s 
+            UPDATE {STATS_DB_NAME}.popular_searches
+            SET counter = %s
             WHERE query_hash = %s
         """, (new_count, query_hash))
         logger.info(f"Updated {query} to {new_count}")
 
 
-## _set_counter("/search?movie=lexx&exact_year=", 150500)
+# _set_counter("/search?movie=lexx&exact_year=", 150500)
+# _set_counter("/search?movie=griechische&exact_year=", 500)
+# _set_counter("/search?movie=monkeyshines&exact_year=", 40)
 
 
-def log_search(query):
-    query_hash = md5(query.encode('utf-8')).hexdigest()
+def log_search(query, title= "Many results"):
     try:
+        query_hash = md5(query.encode()).hexdigest()
+        
         with db_cursor() as cursor:
             cursor.execute(f"""
                 INSERT INTO {STATS_DB_NAME}.popular_searches
-                    (query_hash, search_query, counter)
-                VALUES
-                    (%s, %s, 1)
+                (query_hash, search_query, title, counter)
+                VALUES (%s, %s, %s, 1) AS new
                 ON DUPLICATE KEY UPDATE
-                    counter = counter + 1,
-                    last_accessed = CURRENT_TIMESTAMP
-            """, (query_hash, query))
+                    title = new.title,
+                    counter = popular_searches.counter + 1
+            """, (query_hash, query, title.lower().capitalize()))
     except Exception as e:
         logger.error(f"Inside '{stack()[0][3]}' :{e}")
         return []
 
 
+def get_popular_searches(limit=10):
+    try:
+        with db_cursor() as cursor:
+            cursor.execute(f"""
+                SELECT search_query, counter, title
+                FROM {STATS_DB_NAME}.popular_searches
+                ORDER BY counter DESC
+                LIMIT %s
+            """, (limit,))
+            return cursor.fetchall()
+    except mysql.connector.Error as e:
+        logger.error(f"Inside '{stack()[0][3]}' :{e}")
+        return []
 
 
 def search_movies(valid_data):

@@ -61,7 +61,23 @@
 
         </form>
     </div>
-    
+
+    <div class="popular-searches">
+        <h3>Популярные запросы:</h3>
+        <ul>
+            {% for search in popular_searches %}
+            <li>
+                <a href="{{ search.search_query }}">
+                    {{ search.title }}
+                </a>
+                <span class="counter">({{ search.counter }})</span>
+            </li>
+            {% else %}
+            <li>Популярные запросы пока отсутствуют</li>
+            {% endfor %}
+        </ul>
+    </div>
+
     <div id="results">
         {% if results %}
             <h2>Найдено фильмов: {{ results|length }}</h2>
