@@ -1,6 +1,6 @@
 # Movie Search Engine
 
-Web application for searching movies with various filtering capabilities.  
+Web application for searching movies with various filtering capabilities.
 The project includes a request logging system and displays popular search queries.
 
 ## Project Description

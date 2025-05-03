@@ -37,7 +37,7 @@ def db_cursor(dictionary: bool=True):
             connection.close()
 
 
-def get_all_categories() -> list:
+def get_all_categories() -> list[tuple[int, str]]:
     '''Returns a list of all categories'''
     try:
         with db_cursor() as cursor:
@@ -48,15 +48,16 @@ def get_all_categories() -> list:
         return []
 
 
-def make_qerry(
+def make_qery(
         title: str=None,
         min_year: int=None,
         max_year: int=None,
-        nsfw: str=False,
+        nsfw: bool=False,
         exact_year: int=None,
         categories: list=None,
         limit: int=None
-    ) -> tuple[str, list | list[str]]:
+    ) -> tuple[str, list]:
+    'This function generates a query request and params for it'
     if categories:
         query = """
             SELECT DISTINCT f.title, f.description, f.release_year, f.rating
@@ -101,7 +102,7 @@ def make_qerry(
 
 
 # TODO: bring it out to debug_utils.py
-def _set_counter(query, new_count):
+def _set_counter(query:str, new_count:int) -> None:
     '''Debugging func to set counter for views'''
     query_hash = md5(query.encode()).hexdigest()
     
@@ -119,7 +120,7 @@ def _set_counter(query, new_count):
 # _set_counter("/search?movie=monkeyshines&exact_year=", 40)
 
 
-def log_search(query:str, title:str= "Many results") -> (list | None):
+def log_search(query:str, title:str= "Many results") -> None:
     '''Creates or updates info on views in db'''
     try:
         query_hash = md5(query.encode()).hexdigest()
@@ -138,7 +139,7 @@ def log_search(query:str, title:str= "Many results") -> (list | None):
         return []
 
 
-def get_popular_searches(limit:int=10) -> list:
+def get_popular_searches(limit:int=10) -> list[tuple]:
     '''returns a list of most popular searches'''
     try:
         with db_cursor() as cursor:
@@ -154,10 +155,11 @@ def get_popular_searches(limit:int=10) -> list:
         return []
 
 
-def search_movies(valid_data:dict) -> list:
+def search_movies(valid_data:dict) -> list[tuple]:
+    'returns a list af found movies'
     try:
         with db_cursor() as cursor:
-            cursor.execute(*make_qerry(**valid_data))
+            cursor.execute(*make_qery(**valid_data))
             results = cursor.fetchall()
         return results
         

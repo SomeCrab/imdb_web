@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 def validate_year(
         value: int,
         name: str
-        ) -> tuple[None, None] | tuple[int, None] | tuple[None, int]:
+        ) -> tuple[int | None, str | None]:
     """
     Преобразует строку в int и проверяет, что год в [YEAR_MIN, YEAR_MAX].
     Возвращает (год, сообщение об ошибке).
@@ -33,8 +33,8 @@ def validate_parsed_data(
         exact_year: int=None,
         categories: list=[],
         limit: int=None
-        ) -> dict:
-    '''Validates user input'''
+        ) -> tuple[list[str], dict]:
+    '''Validates user input and returns errors | empty list and dict of user inputs'''
     errors = []
     min_y, err0 = validate_year(min_year, "минимальный год")
     if err0: errors.append(err0)

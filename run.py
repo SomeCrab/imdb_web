@@ -1,7 +1,8 @@
 from core.logger import setup_logging
 from app.server import run_server
 
-def main():
+def main() -> None:
+    'Main function that starts the whole thing'
     setup_logging()
     run_server()
 

@@ -1,17 +1,94 @@
 {% extends "base.html" %}
 
-{% block title %}About{% endblock %}
+{% block title %}О проекте{% endblock %}
 
 {% block content %}
-    <h1>О проекте</h1>
+    <h1>Movie Search Engine</h1>
     
     <div class="about-content">
-        <p>Этот проект использует:</p>
-        <ul>
-            <li>Базу данных MySQL</li>
-            <li>Python для бэкенда</li>
-            <li>Jinja2 для шаблонов</li>
-            <li>Ванильный JavaScript ибо модно, стильно, молодёжно</li>
-        </ul>
+        <section class="project-section">
+            <p>Веб-приложение для поиска фильмов с различными фильтрами</p>
+            <div class="features">
+                <h3>Основные возможности:</h3>
+                <ul class="feature-list">
+                    <li>Поиск по частичному совпадению названия</li>
+                    <li>Фильтрация по году или диапазону лет</li>
+                    <li>Исключение контента для взрослых</li>
+                    <li>Выбор из 16 жанров</li>
+                    <li>Топ популярных запросов</li>
+                    <li>Адаптивный веб-интерфейс</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="tech-section">
+            <h2>Стэк</h2>
+            <ul class="tech-list">
+                <li>Python 3.12.4</li>
+                <li>Модуль http.server</li>
+                <li>Модуль logging</li>
+                <li>Модуль Jinja2</li>
+                <li>MySQL</li>
+                <li>Ванильный JavaScript</li>
+            </ul>
+        </section>
+
+        <section class="install-section">
+            <h2>Установка</h2>
+            <pre><code>git clone https://github.com/SomeCrab/imdb_web
+pip install -r requirements.txt
+# Set up database configuration in .env file
+python run.py</code></pre>
+        </section>
+
+        <div class="button-group">
+            <a href="/" class="home-button">На главную</a>
+        </div>
     </div>
+{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .about-content {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .project-section, .tech-section, .install-section {
+        margin: 2rem 0;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .feature-list, .tech-list {
+        columns: 2;
+        padding-left: 1.5rem;
+    }
+
+    .feature-list li, .tech-list li {
+        margin: 0.5rem 0;
+        break-inside: avoid;
+    }
+
+    pre {
+        background: #2c3e50;
+        color: white;
+        padding: 1rem;
+        border-radius: 6px;
+        overflow-x: auto;
+    }
+
+    code {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+        .feature-list, .tech-list {
+            columns: 1;
+        }
+    }
+</style>
 {% endblock %}

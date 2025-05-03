@@ -186,6 +186,59 @@ legend {
         padding: 1rem;
     }
 }
+
+/* Стили для группы кнопок */
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 1rem;
+}
+
+/* Общие стили для кнопок */
+button[type="submit"],
+.home-button {
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    text-align: center;
+}
+
+/* Стиль для кнопки "Найти" */
+button[type="submit"] {
+    background: #3498db;
+    color: white;
+}
+
+/* Стиль для кнопки "На главную" */
+.home-button {
+    background: #95a5a6;
+    color: white;
+}
+
+/* Ховер-эффекты */
+button[type="submit"]:hover {
+    background: #2980b9;
+}
+
+.home-button:hover {
+    background: #7f8c8d;
+}
+
+/* Адаптивность мобилок */
+@media (max-width: 480px) {
+    .button-group {
+        flex-direction: column;
+    }
+    
+    button[type="submit"],
+    .home-button {
+        width: 100%;
+    }
+}
     </style>
     {% endblock %}
 </head>

@@ -13,7 +13,9 @@ env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
 
 class RequestHandler(BaseHTTPRequestHandler):
-    def _parse_query(self):
+    'Main class to serve html request handling'
+    def _parse_query(self) -> dict:
+        'This methon parses requests and returns a dict with all queries'
         try:
             query = parse_qs(urlparse(self.path).query)
             return {
@@ -30,7 +32,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             return {}
 
 
-    def do_GET(self):
+    def do_GET(self) -> None:
+        'This method handles GET requests'
         try:
             parsed_path = urlparse(self.path)
             parsed_query = self._parse_query()
@@ -89,7 +92,17 @@ class RequestHandler(BaseHTTPRequestHandler):
             logger.error(f"Inside '{stack()[0][3]}' :{e}")
             self.send_custom_response(e, resp_code=500, templ='error.html', extras={'cur_path': parsed_path.path})
 
-    def send_custom_response(self, data, valid_data=None, resp_code=200, Cont_type="text/html", templ='index.html', api=False, extras=None):
+    def send_custom_response(
+            self,
+            data,
+            valid_data=None,
+            resp_code : int=200,
+            Cont_type: str="text/html",
+            templ: str='index.html',
+            api: bool=False,
+            extras=None
+            ) -> None:
+        'This method forms and sends response'
         self.send_response(resp_code)
         self.send_header("Content-type", Cont_type)
         self.end_headers()
