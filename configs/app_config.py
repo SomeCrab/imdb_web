@@ -15,7 +15,7 @@ MIN_ALLOWED_YEAR = 1890
 LIMIT = 50
 
 # server set ups
-SERVER_HOST = 'localhost'
+SERVER_HOST = '0.0.0.0'
 SERVER_PORT = 8000
 
 # MySQL configuration

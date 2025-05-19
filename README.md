@@ -30,6 +30,39 @@ The application allows you to:
 - Jinja2 module
 - MySQL
 
+
+## Structure
+
+```bash
+project_root/
+├── app/
+│   ├── __init__.py
+│   ├── database.py
+│   ├── handler.py
+│   ├── server.py
+│   └── validation.py
+├── logs/
+│   ├── app_config.py
+│   └── logging_config/
+│       └── config.json
+├── core/
+│   ├── __init__.py
+│   └── logger.py
+├── templates/
+│   ├── about.html
+│   ├── base.html
+│   ├── error.html
+│   ├── index.html
+│   └── not_found.html
+├── .env
+├── .gitignore
+├── docker-compose.yml
+├── dockerfile
+├── README.md
+├── requirements.txt
+└── run.py
+```
+
 ## Dependencies
 
 **Required packages:**
